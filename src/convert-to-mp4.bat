@@ -76,7 +76,7 @@ call :try_gpu_encoder h264_amf "-quality balanced -rc cqp -qp_i %crf% -qp_p %crf
 
 if not defined conversionSucceeded (
     echo No usable GPU encoder was found. Falling back to CPU encoding...
-    ffmpeg -y -i "%input%" -c:v libx264 -crf %crf% -preset %preset% -c:a aac -b:a 192k "%tempOutput%"
+    ffmpeg -y -i "%input%" -c:v libx264 -crf %crf% -preset %preset% -pix_fmt yuv420p -c:a aac -b:a 192k "%tempOutput%"
     if errorlevel 1 goto conversion_failed
 )
 
@@ -95,7 +95,7 @@ ffmpeg -hide_banner -encoders 2>nul | findstr /i /c:"%~1" >nul
 if errorlevel 1 exit /b 0
 
 echo Trying GPU encoder: %~1
-ffmpeg -y -hide_banner -loglevel error -i "%input%" -c:v %~1 %~2 -c:a aac -b:a 192k "%tempOutput%"
+ffmpeg -y -hide_banner -loglevel error -i "%input%" -c:v %~1 %~2 -pix_fmt yuv420p -c:a aac -b:a 192k "%tempOutput%"
 if not errorlevel 1 (
     set "conversionSucceeded=1"
 ) else if exist "%tempOutput%" (
