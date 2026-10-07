@@ -52,6 +52,7 @@ if /i "%quality%"=="fast" (
 )
 
 set "output=%~dpn1.mp4"
+set "tempOutput=%~dpn1.convert-tmp.mp4"
 
 if exist "%output%" (
     set /p overwrite="Output file already exists: %output%  Overwrite? (y/n): "
@@ -68,13 +69,43 @@ echo   Input:  %input%
 echo   Output: %output%
 echo.
 
-ffmpeg -i "%input%" -c:v libx264 -crf %crf% -preset %preset% -c:a aac -b:a 192k "%output%"
+set "conversionSucceeded="
+call :try_gpu_encoder h264_nvenc "-preset p5 -rc vbr -cq %crf% -b:v 0"
+call :try_gpu_encoder h264_qsv "-preset medium -global_quality %crf%"
+call :try_gpu_encoder h264_amf "-quality balanced -rc cqp -qp_i %crf% -qp_p %crf%"
+
+if not defined conversionSucceeded (
+    echo No usable GPU encoder was found. Falling back to CPU encoding...
+    ffmpeg -y -i "%input%" -c:v libx264 -crf %crf% -preset %preset% -c:a aac -b:a 192k "%tempOutput%"
+    if errorlevel 1 goto conversion_failed
+)
+
+move /y "%tempOutput%" "%output%" >nul
+if errorlevel 1 goto conversion_failed
 
 echo.
-if errorlevel 1 (
-    echo [FAILED] Conversion did not complete successfully.
-) else (
-    echo [DONE] Saved to: %output%
-)
+echo [DONE] Saved to: %output%
 echo.
 pause
+exit /b 0
+
+:try_gpu_encoder
+if defined conversionSucceeded exit /b 0
+ffmpeg -hide_banner -encoders 2>nul | findstr /i /c:"%~1" >nul
+if errorlevel 1 exit /b 0
+
+echo Trying GPU encoder: %~1
+ffmpeg -y -hide_banner -loglevel error -i "%input%" -c:v %~1 %~2 -c:a aac -b:a 192k "%tempOutput%"
+if not errorlevel 1 (
+    set "conversionSucceeded=1"
+) else if exist "%tempOutput%" (
+    del /q "%tempOutput%"
+)
+exit /b 0
+
+:conversion_failed
+echo.
+echo [FAILED] Conversion did not complete successfully.
+echo.
+pause
+exit /b 1

@@ -14,11 +14,11 @@ Download the installer from the [Releases page](../../releases/latest), pick you
    - **Default quality**: Fast / Balanced (default) / High quality
 4. If ffmpeg isn't found on your PATH, the installer will tell you at the end — see [Prerequisites](#prerequisites) below.
 
-That's it. Right-click a video file → **Convert to MP4** → a console window shows ffmpeg running → the `.mp4` is saved next to the original.
+That's it. Right-click a video file → **Convert to MP4** → a console window shows ffmpeg running → the `.mp4` is saved next to the original. The converter tries NVIDIA, Intel, and AMD GPU encoders and falls back to CPU encoding if none can be used.
 
 ## Prerequisites
 
-The installer doesn't bundle ffmpeg (it's a large, separately-licensed binary), so you need it on your `PATH`:
+The installer doesn't bundle ffmpeg (it's a large, separately-licensed binary), so you need it on your `PATH`. GPU encoding also requires a compatible GPU, current drivers, and an ffmpeg build with its vendor's encoder enabled. Otherwise, the converter uses CPU encoding:
 
 ```
 winget install ffmpeg
@@ -34,7 +34,7 @@ Use **Settings → Apps → MOV to MP4 Converter → Uninstall**, or find it in 
 
 The installer writes your chosen preset to `config.ini` next to `convert-to-mp4.bat` in the install folder (`%LocalAppData%\Programs\MovToMp4Converter` by default). Edit `Quality=` in that file to `fast`, `balanced`, or `high` at any time — no reinstall needed.
 
-| Preset   | ffmpeg settings              | Notes                          |
+| Preset   | CPU ffmpeg settings           | Notes                          |
 |----------|-------------------------------|---------------------------------|
 | fast     | `-preset veryfast -crf 23`    | Smaller files, faster, lower quality |
 | balanced | `-preset medium -crf 18`      | Good default tradeoff           |
@@ -98,7 +98,7 @@ Update the URL placeholders in this README and in `installer/setup.iss` (`MyAppU
 
 - Registers per-user (`HKCU`) only — no admin rights required, and it won't affect other accounts on the same PC.
 - Selecting multiple files and using the context menu entry launches one conversion window per file.
-- Video is re-encoded with H.264 (`libx264`) and audio with AAC — a broadly compatible, high-quality combination.
+- Video is re-encoded with H.264 using NVIDIA NVENC, Intel QSV, or AMD AMF when available, and otherwise `libx264`; audio is encoded with AAC.
 
 ## License
 
